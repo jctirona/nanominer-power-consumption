@@ -1,0 +1,85 @@
+Power Consumption Calculator - Single
+By Jet Erickson Tirona
+
+This function calculates total power consumption from a given filename. Inputs are file names of .log files from Nanominer.exe.
+function TotalkWh = getKWH(filename)
+Read Log Data into Workspace
+data_textread = textread(filename, '%s', 'delimiter', '\n', 'whitespace', '');
+SEARCH FOR SPEED LINE
+    i = 0;
+    found = false;
+    keyWord_speedLine = "Time:";
+    
+    while found ~= true
+        current_line = string(data_textread(end-i));
+        if contains(current_line,keyWord_speedLine) == 1
+            found = true;
+        end
+        i = i+1;
+    end
+    
+    backTrack = i-1;
+    SpeedLine = string(data_textread(end-backTrack));
+SEARCH FOR POWER LINE
+    i = 0;
+    found = false;
+    keyWord_powerLine = "Total power:";
+    
+    while found ~= true
+        current_line = string(data_textread(end-i));
+        if contains(current_line,keyWord_powerLine) == 1
+            found = true;
+        end
+        i = i+1;
+    end
+    
+    backTrack = i-1;
+    PowerLine = string(data_textread(end-backTrack));
+Speed Line Processing
+    nums_SpeedLine = regexp(SpeedLine,'\d+\.?\d*','match');
+    Table_SpeedLine = array2table(nums_SpeedLine);
+    
+    if size(nums_SpeedLine,2) == 12
+        VariableNames = {'Year' 'Day' 'Hour' 'Minute' 'Second' 'Hashrate' 'Total_Shares' 'Shares_Rejected' 'Days' 'Hours' 'Minutes' 'Seconds' };
+        Table_SpeedLine.Properties.VariableNames([1 2 3 4 5 6 7 8 9 10 11 12]) = VariableNames;
+    elseif size(nums_SpeedLine,2) == 11
+        VariableNames = {'Year' 'Day' 'Hour' 'Minute' 'Second' 'Hashrate' 'Total_Shares' 'Shares_Rejected' 'Hours' 'Minutes' 'Seconds' };
+        Table_SpeedLine.Properties.VariableNames([1 2 3 4 5 6 7 8 9 10 11]) = VariableNames;
+    elseif size(nums_SpeedLine,2) == 10
+        VariableNames = {'Year' 'Day' 'Hour' 'Minute' 'Second' 'Hashrate' 'Total_Shares' 'Shares_Rejected' 'Minutes' 'Seconds' };
+        Table_SpeedLine.Properties.VariableNames([1 2 3 4 5 6 7 8 9 10]) = VariableNames;
+    elseif size(nums_SpeedLine,2) == 9
+        VariableNames = {'Year' 'Day' 'Hour' 'Minute' 'Second' 'Hashrate' 'Total_Shares' 'Shares_Rejected' 'Seconds' };
+        Table_SpeedLine.Properties.VariableNames([1 2 3 4 5 6 7 8 9]) = VariableNames;
+    end  
+    
+    for i = 1:width(Table_SpeedLine)
+        if isstring(Table_SpeedLine.(i))
+            Table_SpeedLine.(i) = str2double(Table_SpeedLine.(i));
+        end
+    end
+Power Line Processing
+    nums_PowerLine = regexp(PowerLine,'\d+\.?\d*','match');
+    Table_PowerLine = array2table(nums_PowerLine);
+    VariableNames = {'Year' 'Day' 'Hour' 'Minute' 'Second' 'GPU' 'Temperature' 'Fan_Speed' 'GPU_Power' 'Total_Power'};
+    Table_PowerLine.Properties.VariableNames([1 2 3 4 5 6 7 8 9 10]) = VariableNames;
+    
+    for i = 1:width(Table_PowerLine)
+        if isstring(Table_PowerLine.(i))
+            Table_PowerLine.(i) = str2double(Table_PowerLine.(i));
+        end
+    end
+Calculations
+    if size(nums_SpeedLine,2) == 12
+        TotalTime = Table_SpeedLine.Days*24 + Table_SpeedLine.Hours + Table_SpeedLine.Minutes/60 + Table_SpeedLine.Seconds/3600;
+    elseif size(nums_SpeedLine,2) == 11
+        TotalTime = Table_SpeedLine.Hours + Table_SpeedLine.Minutes/60 + Table_SpeedLine.Seconds/3600;
+    elseif size(nums_SpeedLine,2) == 10
+        TotalTime = Table_SpeedLine.Minutes/60 + Table_SpeedLine.Seconds/3600;
+    elseif size(nums_SpeedLine,2) == 9
+        TotalTime = Table_SpeedLine.Seconds/3600;
+    end
+    
+    TotalPower = Table_PowerLine.Total_Power;
+    TotalkWh = (TotalPower/1000)*TotalTime;
+end
