@@ -1,0 +1,73 @@
+Power Consumption Calculator - Nanominer
+By Jet Erickson Tirona
+
+This script will calculate the total power consumption for a given date range.
+close, clear, clc, fclose('all');
+
+StartDate = [2021 10 28]; JD_START = juliandate(StartDate(1),StartDate(2),StartDate(3));
+EndDate   = [2021 11 29]; JD_END   = juliandate(EndDate(1),EndDate(2),EndDate(3));
+Directory Processing
+directory = dir;
+directory = directory([directory.isdir] ~= 1);
+directory = struct2table(directory);
+directory = removevars(directory,{'folder','isdir','datenum','date','bytes'});
+directory.name = string(directory.name);
+
+FILTER - ONLY KEEPS .LOG FILES
+rowsToDelete = [];
+filter_FileEXT = '.log';
+
+for i = 1:size(directory,1)
+    if contains(directory.name(i),filter_FileEXT) == 0
+        rowsToDelete = [rowsToDelete, i];
+    end
+end
+
+directory(rowsToDelete,:) = [];
+
+FILTER - DELETES CONTINOUS FILES
+rowsToDelete = [];
+for i = 1:size(directory,1)
+    
+    nums_FileName = regexp(directory.name(i),'\d+\.?\d*','match');
+    howManyFields(i) = size(nums_FileName,2);
+    
+    if howManyFields(i) > 6
+        rowsToDelete = [rowsToDelete, i];
+    end
+end
+directory(rowsToDelete,:) = [];
+
+Create Properties - Month + Day
+for i = 1:size(directory,1)
+    nums_FileName = regexp(directory.name(i),'\d+\.?\d*','match');
+    directory.year(i) = double(nums_FileName(1));
+    directory.month(i) = double(nums_FileName(2));
+    directory.day(i) = double(nums_FileName(3));
+    directory.JD(i) = juliandate(directory.year(i),directory.month(i),directory.day(i));
+    %directory.hour(i) = double(nums_FileName(4));
+    %directory.minute(i) = double(nums_FileName(5));
+    %directory.second(i) = double(nums_FileName(6));
+end
+
+NEED TO CREATE JULIAN DATE
+directory = directory(directory.JD >= JD_START,:);
+directory = directory(directory.JD <= JD_END,:);
+% directory = directory(directory.day >= StartDate(2),:);
+% directory = directory(directory.day <= EndDate(2),:);
+
+Get Power Consumption in kWh
+for i = 1:size(directory,1)
+    try
+        directory.Time(i) = getTIME(directory.name(i));
+    catch
+        directory.Time(i) = 0;
+    end
+end
+ 
+powerRating = .210;
+TimeMining = sum(directory.Time);
+powerConsumption = powerRating * TimeMining %inkWh
+billTotal = 294.10;
+housePowerConsumption = 1319;
+jetCost = powerConsumption/housePowerConsumption*billTotal
